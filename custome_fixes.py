@@ -75,7 +75,7 @@ class BaseFix:
         pass
 
     def generator(self):
-        return (x for x in [])  # empty
+        return iter([])
 
 
 class Fix(BaseFix):
@@ -240,51 +240,43 @@ class CategoriesFix(LazyFix):
         yield (FULL_ARTICLE_REGEX, self.harvestSortKey)
 
     def sort_category(self, category):
-        MAIN_CATEGORY = 0
         REGULAR_CATEGORY = 1
-        BIRTH_CATEGORY = 10
-        DEATH_CATEGORY = 20
-        PLACE = 0
-        CENTURY = 1
-        YEAR = 2
-        DATE = 3
-        LIVING_CATEGORY = 30
-        MAINTENANCE_CATEGORY = 50
-        GENDER_CATEGORY = 100
         if category.sortKey == ' ':
-            return MAIN_CATEGORY
-
+            return 0
         title = category.title(with_ns=False, insite=category.site)
         split = title.split()
         if title.startswith('Údržba:'):
-            return MAINTENANCE_CATEGORY
+            return 50
         if title == 'Žijící lidé':
-            return LIVING_CATEGORY
+            return 30
         if title in ('Muži', 'Ženy'):
-            return GENDER_CATEGORY
-
+            return 100
         index = REGULAR_CATEGORY
         if split[0] in ('Narození', 'Úmrtí'):
+            DEATH_CATEGORY = 20
             if title.startswith('Narození'):
+                BIRTH_CATEGORY = 10
                 index = BIRTH_CATEGORY
             elif title.startswith('Úmrtí'):
                 index = DEATH_CATEGORY
 
+            PLACE = 0
+            YEAR = 2
             if 'století' in split:
+                CENTURY = 1
                 index += CENTURY
             elif 'v' in split or 've' in split:
                 index += PLACE
             elif split[1] == split[-1] and split[-1].isdigit():
                 index += YEAR
             else:
+                DATE = 3
                 index += DATE
 
         return index
 
     def tidy_sortkey(self, sortkey):
-        if sortkey:
-            return ', '.join(re.split(r', *', sortkey.strip()))
-        return sortkey
+        return ', '.join(re.split(r', *', sortkey.strip())) if sortkey else sortkey
 
     def duplicateSortKey(self, match):
         text = match.group()
@@ -315,8 +307,10 @@ class CategoriesFix(LazyFix):
 
         keys = defaultdict(lambda: 0.0)
         categories = textlib.getCategoryLinks(text, site=self.site)
-        if not any(category.title(with_ns=False) in (
-                'Muži', 'Žijící lidé', 'Ženy') for category in categories):
+        if all(
+            category.title(with_ns=False) not in ('Muži', 'Žijící lidé', 'Ženy')
+            for category in categories
+        ):
             return text
 
         for category in categories:
@@ -405,7 +399,7 @@ class FilesFix(LazyFix):
         while i < len(split):
             while (split[i].count('[[') != split[i].count(']]') or
                    split[i].count('{{') != split[i].count('}}')):
-                split[i] += '|' + split[i+1]
+                split[i] += f'|{split[i + 1]}'
                 split.pop(i+1)
 
             split[i] = split[i].strip()
@@ -434,16 +428,12 @@ class FilesFix(LazyFix):
                         continue
                     word = self.keytolocal[key].partition('=')[0]
                     break
-                else:
-                    # if rest.endswith('.'): todo
-                    pass
-
             split[i] = word + eq + rest
             i += 1
 
         deduplicate(split)
 
-        return '[[%s]]' % '|'.join(split)
+        return f"[[{'|'.join(split)}]]"
 
 
 class CheckWikiFix(LazyFix):  # todo: make abstract and split
@@ -472,15 +462,14 @@ class CheckWikiFix(LazyFix):  # todo: make abstract and split
 
     def replacements(self):
         for error in self.checkwiki.iter_errors(only_for_fixes=True):
-            pair = error.toTuple()
-            yield pair
+            yield error.toTuple()
 
     def apply(self, page, summaries=[], callbacks=[]):
         replaced = []
         fixed = []
         page.text = self.checkwiki.apply(page.text, page, replaced, fixed)
         if replaced:  # todo: maxsummarycw
-            summaries.append('[[WP:WCW|CheckWiki]]: %s' % ', '.join(replaced))
+            summaries.append(f"[[WP:WCW|CheckWiki]]: {', '.join(replaced)}")
             callbacks.append(
                 lambda: self.checkwiki.mark_as_fixed_multiple(page, fixed))
 
@@ -575,11 +564,7 @@ class RedirectFix(LazyFix):
 
             target = page.getRedirectTarget()
             title = target.title()
-            if link == first_lower(link):
-                self.cache[link] = first_lower(title)
-            else:
-                self.cache[link] = title
-
+            self.cache[link] = first_lower(title) if link == first_lower(link) else title
         return self.cache[link]
 
     def replacements(self):
@@ -664,8 +649,7 @@ class RefSortFix(LazyFix):
             ' name *=[^/=>]+/)>){2,}', re.S)
 
     def sortkey(self, ref, all_names, start):
-        name = ref.group(1) or ref.group(2)
-        if name:
+        if name := ref.group(1) or ref.group(2):
             name = name.strip('" \'')
             for i, (j, s) in enumerate(all_names):
                 if j == name and start + ref.start() > s:
@@ -1010,10 +994,10 @@ class TypoFix(LazyFix):
         if count > 0:  # todo: separate function
             if count > 1:
                 max_typos = self.maxsummarytypos
-                summary = 'oprava překlepů: %s' % ', '.join(replaced[:max_typos])
+                summary = f"oprava překlepů: {', '.join(replaced[:max_typos])}"
                 if count > max_typos:
                     if count - max_typos > 1:
-                        summary += ' a %s dalších' % (count - max_typos)
+                        summary += f' a {count - max_typos} dalších'
                     else:
                         summary += ' a jednoho dalšího'
             else:

@@ -45,9 +45,9 @@ class ExternalIdSlicingBot(WikidataEntityBot):
             if not self.sparql.ask(ask):
                 break
             query = self.store.build_query('external-ids', **opts)
-            gen = PreloadingEntityGenerator(
-                WikidataSPARQLPageGenerator(query, site=self.repo))
-            yield from gen
+            yield from PreloadingEntityGenerator(
+                WikidataSPARQLPageGenerator(query, site=self.repo)
+            )
             offset += step
 
     def treat_page_and_item(self, page, item):

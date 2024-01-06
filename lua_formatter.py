@@ -79,12 +79,12 @@ def _format_list(data, level, **kwargs):
 
 def _format_dictionary(data, level, **kwargs):
     init = '\n' + _indent(level, **kwargs)
-    string = ''
     keys = data.keys()
     if kwargs.get('sort_keys') is True:
         keys = sorted(keys)
-    for key in keys:
-        string += init + _format_pair(key, data[key], level, **kwargs)
+    string = ''.join(
+        init + _format_pair(key, data[key], level, **kwargs) for key in keys
+    )
     return '{' + string + '\n' + _indent(level-1, **kwargs) + '}'
 
 

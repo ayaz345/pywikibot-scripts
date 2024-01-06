@@ -102,8 +102,7 @@ class TypoReportBot(SingleSiteBot):
         if (self.generator_completed or self.opt.anything) and outputpage:
             put = []
             for link in self.order:
-                for match in self.data[link]:
-                    put.append(self.pattern.format(link, match))
+                put.extend(self.pattern.format(link, match) for match in self.data[link])
             page = pywikibot.Page(self.site, outputpage)
             page.text = '\n'.join(put)
             page.save(summary='aktualizace seznamu překlepů', minor=False,
@@ -129,8 +128,7 @@ class PurgeTypoReportBot(SingleSiteBot, ExistingPageBot):
         regex = re.compile(self.helper.pattern.format(
             r'\[\[([^]]+)\]\]', '(.+)'))
         for line in text.splitlines():
-            match = regex.fullmatch(line)
-            if match:
+            if match := regex.fullmatch(line):
                 title, text = match.groups()
                 entry = pywikibot.Page(self.site, title)
                 self.cache[entry.title()].append(text)

@@ -63,8 +63,11 @@ class WikidataEntityBot(WikidataBot):
 
     def user_edit_entity(self, item, data=None, *, cleanup=None, **kwargs):
         # todo: support stub items
-        if item.exists() and not (cleanup is False or (
-                self.opt['nocleanup'] and cleanup is not True)):
+        if (
+            item.exists()
+            and cleanup is not False
+            and (not self.opt['nocleanup'] or cleanup is True)
+        ):
             if self.kit.cleanup(item, data):
                 if kwargs.get('summary'):
                     kwargs['summary'] += '; cleanup'

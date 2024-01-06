@@ -51,10 +51,10 @@ class DuplicateDatesBot(WikidataEntityBot):
         if first.precision > second.precision:
             if second.precision in {9, 10}:
                 if first.year == second.year:
-                    if second.precision == 9:
-                        return True
-                    elif second.precision == 10:
+                    if second.precision == 10:
                         return first.month == second.month
+                    elif second.precision == 9:
+                        return True
         return False
 
     @staticmethod
@@ -63,10 +63,7 @@ class DuplicateDatesBot(WikidataEntityBot):
             return True
         if first.precision == second.precision:
             if first.precision in {9, 10} and first.year == second.year:
-                if first.precision == 10:
-                    return first.month == second.month
-                else:
-                    return True
+                return first.month == second.month if first.precision == 10 else True
         return False
 
     @classmethod
@@ -75,10 +72,7 @@ class DuplicateDatesBot(WikidataEntityBot):
 
     @classmethod
     def number_of_sources(cls, claim):
-        number = 0
-        for source in claim.sources:
-            number += cls.is_valid_source(source)
-        return number
+        return sum(cls.is_valid_source(source) for source in claim.sources)
 
     @classmethod
     def is_sourced(cls, claim):
@@ -109,7 +103,7 @@ class DuplicateDatesBot(WikidataEntityBot):
                 targets = lambda c1, c2: (c1.getTarget(), c2.getTarget())
                 if self.first_same_as_second(*targets(claim1, claim2)):
                     if self.number_of_sources(claim1) > \
-                       self.number_of_sources(claim2):
+                           self.number_of_sources(claim2):
                         old, new = claim2, claim1
                     else:
                         old, new = claim1, claim2
@@ -135,11 +129,12 @@ class DuplicateDatesBot(WikidataEntityBot):
                         already.add(second.snak)
                         break
 
-            if redundant or unmerged:
-                if redundant:
-                    summary = self.summary
-                else:
-                    summary = 'remove redundant claim(s)'
+            if redundant:
+                summary = self.summary
+                item.removeClaims(redundant + unmerged, summary=summary)
+
+            elif unmerged:
+                summary = 'remove redundant claim(s)'
                 item.removeClaims(redundant + unmerged, summary=summary)
 
 

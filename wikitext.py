@@ -33,10 +33,7 @@ class WikitextFixingBot(SingleSiteBot, ExistingPageBot):
             else:
                 demand = bool(kwargs.pop(fix, False))
             if demand:
-                options = {}
-                for opt in cls.options.keys():
-                    if opt in kwargs:
-                        options[opt] = kwargs.pop(opt)
+                options = {opt: kwargs.pop(opt) for opt in cls.options.keys() if opt in kwargs}
                 self.fixes.append(cls(**options))
 
         self.fixes.sort(key=lambda fix: fix.order)
@@ -54,7 +51,7 @@ class WikitextFixingBot(SingleSiteBot, ExistingPageBot):
         page = self.current_page
         old_text = page.text
         callbacks = self.applyFixes(page, summaries)
-        if len(summaries) < 1:
+        if not summaries:
             pywikibot.info('No replacements worth saving')
             return
         pywikibot.showDiff(old_text, page.text)
@@ -78,9 +75,7 @@ class WikitextFixingBot(SingleSiteBot, ExistingPageBot):
 
         self.current_page = page
 
-        show_diff = kwargs.pop('show_diff', not self.opt['always'])
-
-        if show_diff:
+        if show_diff := kwargs.pop('show_diff', not self.opt['always']):
             pywikibot.showDiff(oldtext, newtext)
 
         if 'summary' in kwargs:

@@ -281,7 +281,7 @@ class CheckWikiBot(WikitextFixingBot):
         fixed = []
         text = self.checkwiki.apply(
             page.text, page, replaced, fixed, self.numbers)
-        summary = 'opravy dle [[WP:WCW|CheckWiki]]: %s' % ', '.join(replaced)
+        summary = f"opravy dle [[WP:WCW|CheckWiki]]: {', '.join(replaced)}"
         self.put_current(
             text, summary=summary,
             callback=lambda *args: self.mark_as_fixed_on_success(fixed, *args))

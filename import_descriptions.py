@@ -34,8 +34,7 @@ class BaseDescriptionBot(WikidataEntityBot):
 
     @staticmethod
     def handle_link(match):
-        text = match[2]
-        if text:
+        if text := match[2]:
             return text.lstrip('|').strip()
         else:
             return match['title'].strip()
@@ -91,7 +90,7 @@ class MissingDescriptionBot(BaseDescriptionBot):
         if self.site.lang in item.descriptions:
             return
         title = item.getSitelink(self.site)
-        link_start = re.escape('[[' + title)
+        link_start = re.escape(f'[[{title}')
         search_query = fr'linksto:"{title}" insource:/\* *{link_start}/'
         regex = self.get_regex_for_title(re.escape(title))
         for ref_page in PreloadingGenerator(
@@ -154,8 +153,7 @@ def main(*args):
             else:
                 options[arg[1:]] = True
 
-    generator = genFactory.getCombinedGenerator(preload=True)
-    if generator:
+    if generator := genFactory.getCombinedGenerator(preload=True):
         bot = MappingDescriptionBot(generator=generator, site=site, **options)
     else:
         bot = MissingDescriptionBot(site=site, **options)

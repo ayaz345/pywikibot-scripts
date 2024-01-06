@@ -125,11 +125,7 @@ class SubmitDataWrapper(EntityDataWrapper):
     def get_sitelink(self, dbname: str):
         if dbname in self.data.get('sitelinks', {}):
             value = self.data['sitelinks'][dbname]
-            if value['title']:
-                return SiteLink.fromJSON(value, self.entity.repo)
-            else:
-                return None
-
+            return SiteLink.fromJSON(value, self.entity.repo) if value['title'] else None
         return super().get_sitelink(dbname)
 
     def iter_sitelinks(self):
@@ -263,8 +259,7 @@ class WikidataCleanupToolkit:
         for lang in wrapper.iter_aliases():
             already = set()
             aliases = wrapper.get_aliases(lang)
-            label = wrapper.get_label(lang)
-            if label:
+            if label := wrapper.get_label(lang):
                 already.add(label)
             for alias in aliases:
                 if alias in already:
@@ -297,8 +292,7 @@ class WikidataCleanupToolkit:
             ret = True
 
         for lang, norm in self.lang_map.items():
-            description = wrapper.get_description(lang)
-            if description:
+            if description := wrapper.get_description(lang):
                 if norm and not wrapper.get_description(norm):
                     wrapper.set_description(norm, description)
                 wrapper.set_description(lang, '')
@@ -311,8 +305,7 @@ class WikidataCleanupToolkit:
             if norm:
                 new_aliases = wrapper.get_aliases(norm)
                 already = set(map(first_lower, new_aliases))
-                norm_label = wrapper.get_label(norm)
-                if norm_label:
+                if norm_label := wrapper.get_label(norm):
                     already.add(first_lower(norm_label))
                 for alias in old_aliases:
                     if first_lower(alias) not in already:
@@ -627,11 +620,7 @@ class WikidataCleanupToolkit:
 
             if first.precision == second.precision:
                 if first.precision in {9, 10} and first.year == second.year:
-                    if first.precision == 10:
-                        return first.month == second.month
-                    else:
-                        return True
-
+                    return first.month == second.month if first.precision == 10 else True
         return False
 
     @classmethod
@@ -656,19 +645,18 @@ class WikidataCleanupToolkit:
         return True
 
     def merge_claims(self, claim1, claim2):
-        if self.claims_are_same(claim1, claim2):
-            if claim1.rank != claim2.rank:
-                if claim1.rank == 'normal':
-                    claim1.rank = claim2.rank
-                elif claim2.rank != 'normal':
-                    return False
-            hashes = {ref['hash'] for ref in claim1.toJSON().get(
-                'references', [])}
-            for ref in claim2.toJSON().get('references', []):
-                if ref['hash'] not in hashes:
-                    ref_copy = Claim.referenceFromJSON(claim2.repo, ref)
-                    claim1.sources.append(ref_copy)
-                    hashes.add(ref['hash'])
-            return True
-        else:
+        if not self.claims_are_same(claim1, claim2):
             return False
+        if claim1.rank != claim2.rank:
+            if claim1.rank == 'normal':
+                claim1.rank = claim2.rank
+            elif claim2.rank != 'normal':
+                return False
+        hashes = {ref['hash'] for ref in claim1.toJSON().get(
+            'references', [])}
+        for ref in claim2.toJSON().get('references', []):
+            if ref['hash'] not in hashes:
+                ref_copy = Claim.referenceFromJSON(claim2.repo, ref)
+                claim1.sources.append(ref_copy)
+                hashes.add(ref['hash'])
+        return True

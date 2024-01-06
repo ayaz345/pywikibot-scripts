@@ -33,14 +33,13 @@ class QualifiersFixingBot(WikidataEntityBot):
 
         prop_page.get()
         if 'P31' not in prop_page.claims:
-            pywikibot.warning('%s is not classified' % prop_page.getID())
+            pywikibot.warning(f'{prop_page.getID()} is not classified')
             return False
 
-        for claim in prop_page.claims['P31']:
-            if claim.target_equals(self.good_item):
-                return True
-
-        return False
+        return any(
+            claim.target_equals(self.good_item)
+            for claim in prop_page.claims['P31']
+        )
 
     @property
     def generator(self):
@@ -78,17 +77,22 @@ class QualifiersFixingBot(WikidataEntityBot):
                                     i -= 1
                             moved.add(ref_prop)
 
-                if len(moved) > 0:
+                if moved:
                     data = {'claims': [json]}
                     self.user_edit_entity(item, data, summary=self.makeSummary(prop, moved),
                                           asynchronous=True)
 
     def makeSummary(self, prop, props):
-        props = ['[[Property:P%s]]' % pid for pid in sorted(
-            int(pid[1:]) for pid in props)]
+        props = [
+            f'[[Property:P{pid}]]' for pid in sorted(int(pid[1:]) for pid in props)
+        ]
         return '[[Property:%s]]: moving misplaced reference%s %s to qualifiers' % (
-            prop, 's' if len(props) > 1 else '', '%s and %s' % (
-                ', '.join(props[:-1]), props[-1]) if len(props) > 1 else props[0])
+            prop,
+            's' if len(props) > 1 else '',
+            f"{', '.join(props[:-1])} and {props[-1]}"
+            if len(props) > 1
+            else props[0],
+        )
 
 
 def main(*args):

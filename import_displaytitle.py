@@ -21,10 +21,7 @@ class LabelSettingBot(WikidataEntityBot):
         self.create_missing_item = self.opt['create'] is True
 
     def stripped(self, title):
-        if title.endswith(')'):
-            return title.partition(' (')[0]
-        else:
-            return title
+        return title.partition(' (')[0] if title.endswith(')') else title
 
     def treat_page_and_item(self, page, item):
         title = page.properties().get('displaytitle')

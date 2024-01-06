@@ -130,11 +130,7 @@ class InfoboxMigratingBot(WikitextFixingBot):
                 return text, 0
 
             start = start_match.start()
-            if len(fielddict) > 0:
-                end = text.index('|', start)
-            else:
-                end = text.index('}}', start)
-
+            end = text.index('|', start) if len(fielddict) > 0 else text.index('}}', start)
             unnamed = {}
             for name, value in chain(fielddict.items(), IterUnnamed(unnamed)):
                 end += len(f'|{name}={value}')
@@ -215,26 +211,23 @@ class InfoboxMigratingBot(WikitextFixingBot):
                 lines.append(line)
             nested += line.count('{{') - line.count('}}')
 
-        space_before = ''
-        if len(lines) > 0 and choice(lines).startswith(' '):
-            space_before = ' '
-
+        space_before = ' ' if lines and choice(lines).startswith(' ') else ''
         self.handle_params(new_params, old_params, removed_params, unknown_params)
         self.deduplicate(new_params)
         new_params.sort(key=self.key_for_sort)
 
         new_template = '{{%s' % self.new_template
-        if len(new_params) > 0:
+        if new_params:
             new_template += '\n'
             for param, value in new_params:
                 new_template += f'{space_before}| {param} = {value}\n'
 
-        if len(old_params) > 0:
+        if old_params:
             new_template += '<!-- Zastaralé parametry -->\n'
             for param, value in old_params:
                 new_template += f'{space_before}| {param} = {value}\n'
 
-        if len(unknown_params) > 0:
+        if unknown_params:
             new_template += '<!-- Neznámé parametry -->\n'
             for param, value in unknown_params:
                 new_template += f'{space_before}| {param} = {value}\n'
@@ -348,12 +341,7 @@ class InfoboxMigratingBot(WikitextFixingBot):
             raise UnknownParamException
 
     def handle_params(self, new, old, removed, unknown):
-        # fixme: list of tuples is too complicated
-        params = {}
-        for key, value in chain(new, old, removed, unknown):
-            # todo: if key in params: ...
-            params[key] = value
-
+        params = dict(chain(new, old, removed, unknown))
         if self.image_param in params:
             new.remove(
                 (self.image_param, params[self.image_param])
@@ -421,8 +409,7 @@ class InfoboxMigratingBot(WikitextFixingBot):
 
     def deduplicate(self, params):
         keys = [i for i, j in params]
-        duplicates = {key for key in keys if keys.count(key) > 1}
-        if duplicates:
+        if duplicates := {key for key in keys if keys.count(key) > 1}:
             pywikibot.warning(f'Duplicate arguments {duplicates}')
             for dupe in duplicates:
                 values = [y for x, y in params if x == dupe]

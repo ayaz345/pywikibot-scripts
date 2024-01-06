@@ -112,10 +112,14 @@ class DuosManagingBot(WikidataEntityBot):
 
     def get_relation(self, item):
         ask_pattern = 'ASK { wd:%s wdt:P31/wdt:P279* wd:%%s }' % item.id
-        for key, rel in self.class_to_relation:
-            if self.sparql.ask(ask_pattern % key):
-                return rel
-        return None
+        return next(
+            (
+                rel
+                for key, rel in self.class_to_relation
+                if self.sparql.ask(ask_pattern % key)
+            ),
+            None,
+        )
 
     def get_labels(self, item, relation):
         labels = [{}, {}]
@@ -139,7 +143,7 @@ class DuosManagingBot(WikidataEntityBot):
                         # if items are in a relation, then
                         # they probably share their surname
                         if relation:
-                            split[0] += ' %s' % split1[-1]
+                            split[0] += f' {split1[-1]}'
                             split0.append(split1[-1])
                 if len(split0) > 1 or len(split1) == 1:
                     labels[0][lang] = split[0]
@@ -188,8 +192,7 @@ class DuosManagingBot(WikidataEntityBot):
             self.user_add_claim(item, claim)
 
         for claim in to_remove:
-            pywikibot.info('Removing %s --> %s' % (
-                claim.id, claim.getTarget()))
+            pywikibot.info(f'Removing {claim.id} --> {claim.getTarget()}')
             json = claim.toJSON()
             json['remove'] = ''
             summary = 'moved [[Property:{}]] to {} & {}'.format(
@@ -217,8 +220,7 @@ class DuosManagingBot(WikidataEntityBot):
         self.user_add_claim(new_item, claim)
         for json in to_add:
             temp_claim = pywikibot.Claim.fromJSON(self.repo, json)
-            pywikibot.info('Adding %s --> %s' % (
-                temp_claim.id, temp_claim.getTarget()))
+            pywikibot.info(f'Adding {temp_claim.id} --> {temp_claim.getTarget()}')
             self.user_edit_entity(
                 new_item, {'claims':[json]},
                 summary='moving [[Property:%s]] from %s' % (

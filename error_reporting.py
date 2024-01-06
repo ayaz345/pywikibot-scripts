@@ -52,10 +52,9 @@ class ErrorReportingBot(BaseBot):
     def save_file(self):
         with self.file_lock:
             with open(os.path.join('..', self.file_name),
-                      'r+', encoding='utf-8') as f:
+                              'r+', encoding='utf-8') as f:
                 f.seek(0)  # jump to the beginning
-                text = '\n'.join(f.read().splitlines())  # multi-platform
-                if text:
+                if text := '\n'.join(f.read().splitlines()):
                     self.log_page.text += text
                     self.log_page.save(summary='update')
                     f.seek(0)  # jump to the beginning

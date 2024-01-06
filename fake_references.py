@@ -65,9 +65,9 @@ class FakeReferencesBot(WikidataEntityBot):
                     'fake_references',
                     limit=100 if limit is None else min(100, limit),
                     prop=prop)
+                ok = True
                 for item in pagegenerators.WikidataSPARQLPageGenerator(
                         query, site=self.repo):
-                    ok = True
                     yield item
                     if limit is not None:
                         limit -= 1

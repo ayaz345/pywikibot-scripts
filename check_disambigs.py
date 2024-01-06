@@ -40,10 +40,10 @@ class DisambigsCheckingBot(WikidataEntityBot, ErrorReportingBot):
             not self.is_disambig(item))
 
     def is_disambig(self, item):
-        for claim in item.claims.get('P31', []):
-            if claim.target_equals(self.disambig_item):
-                return True
-        return False
+        return any(
+            claim.target_equals(self.disambig_item)
+            for claim in item.claims.get('P31', [])
+        )
 
     @property
     def generator(self):

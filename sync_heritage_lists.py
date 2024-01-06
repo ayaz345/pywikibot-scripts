@@ -15,7 +15,7 @@ def get_sources(page):
     wiki = pywikibot.Claim(repo, 'P143', is_reference=True)
     wiki.setTarget(pywikibot.ItemPage(repo, 'Q191168'))
     url = pywikibot.Claim(repo, 'P4656', is_reference=True)
-    url.setTarget('https:' + page.permalink())
+    url.setTarget(f'https:{page.permalink()}')
     return [wiki, url]
 
 
@@ -37,8 +37,6 @@ if not generator:
     genFactory.handle_arg('-ref:Template:Památky v Česku')
     generator = genFactory.getCombinedGenerator(preload=True)
 
-ignore_images = {'Noimage 2-1.png'}
-
 pywikibot.info('Loading all identifiers...')
 
 query = 'SELECT * WHERE { ?item wdt:P762 ?id }'
@@ -53,6 +51,7 @@ for entry in result:
     id_to_items[id_].add(item)
 del result
 
+ignore_images = {'Noimage 2-1.png'}
 for page in generator:
     pywikibot.info(page)
     code = mwparserfromhell.parse(page.text)
@@ -105,14 +104,13 @@ for page in generator:
             del best
 
         if item and not template.has('Článek', ignore_empty=True):
-            article = item.sitelinks.get('cswiki')
-            if article:
+            if article := item.sitelinks.get('cswiki'):
                 template.add('Článek', article.ns_title())
                 change = True
 
-        if item and not (
-            template.has('Zeměpisná_šířka', ignore_empty=True)
-            and template.has('Zeměpisná_délka', ignore_empty=True)
+        if item and (
+            not template.has('Zeměpisná_šířka', ignore_empty=True)
+            or not template.has('Zeměpisná_délka', ignore_empty=True)
         ):
             coord = None
             best = get_best_statements(item.claims.get('P625', []))

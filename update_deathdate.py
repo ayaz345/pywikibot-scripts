@@ -30,9 +30,7 @@ class DeathDateUpdatingBot(SingleSiteBot, ExistingPageBot):
     use_redirects = False
 
     def __init__(self, **kwargs):
-        self.available_options.update({
-            'year': datetime.today().year,
-        })
+        self.available_options.update({'year': datetime.now().year})
         super().__init__(**kwargs)
         self.categoryR = re.compile(i18n.translate(self.site, birth))
         self.year = self.opt['year']

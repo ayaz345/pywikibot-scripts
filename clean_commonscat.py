@@ -57,8 +57,7 @@ class CommonscatCleaningBot(WikitextFixingBot, WikidataEntityBot, DeferredCallba
             # todo: l10n
             if template.lower() in ['commonscat', 'commons category']:
                 cat_name = page.title(with_ns=False)
-                value = fielddict.get('1', '').strip()
-                if value:
+                if value := fielddict.get('1', '').strip():
                     has_param = True
                     cat_name = value
                 break

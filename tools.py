@@ -54,7 +54,7 @@ def parse_image(text, site):
                 break
         if caption:
             while caption.count('[') != caption.count(']'):
-                caption = split.pop() + '|' + caption
+                caption = f'{split.pop()}|{caption}'
             caption = caption.rstrip('.').strip()
         image = split[0].partition(':')[2].rstrip(']')
         image = pywikibot.page.url2unicode(image)

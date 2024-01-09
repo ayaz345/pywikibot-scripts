@@ -13,7 +13,7 @@ def get_sources(page):
     wiki = pywikibot.Claim(repo, 'P143', is_reference=True)
     wiki.setTarget(pywikibot.ItemPage(repo, 'Q191168'))
     url = pywikibot.Claim(repo, 'P4656', is_reference=True)
-    url.setTarget('https:' + page.permalink())
+    url.setTarget(f'https:{page.permalink()}')
     return [wiki, url]
 
 
@@ -111,8 +111,7 @@ for page in generator:
                         change = True
 
             if index['obrázek'] is not None:
-                match = fileR.search(str(cells[index['obrázek']]))
-                if match:
+                if match := fileR.search(str(cells[index['obrázek']])):
                     image = pywikibot.FilePage(image_repo, match['filename'])
                     if (
                         image.exists() and not image.isRedirectPage()

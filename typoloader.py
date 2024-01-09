@@ -56,10 +56,7 @@ class TypoRule:
         self.longest = 0
 
     def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self.id == other.id
-        else:
-            return False
+        return self.id == other.id if isinstance(other, self.__class__) else False
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -113,9 +110,9 @@ class TypoRule:
     def summary_hook(self, match, replaced):
         def underscores(string):
             if string.startswith(' '):
-                string = '_' + string[1:]
+                string = f'_{string[1:]}'
             if string.endswith(' '):
-                string = string[:-1] + '_'
+                string = f'{string[:-1]}_'
             return string
 
         new = old = match.group()
@@ -206,8 +203,7 @@ class TyposLoader:
                     pywikibot.warning(exc.message)  # pwb.exception?
                 except InvalidExpressionException as exc:
                     if 'fixed-width' not in exc.message:
-                        pywikibot.warning('Invalid {} {}: {}'.format(
-                            exc.aspect, fielddict['1'], exc.message))
+                        pywikibot.warning(f"Invalid {exc.aspect} {fielddict['1']}: {exc.message}")
                 else:
                     rule.id = self.top_id
                     # fixme: cvar or ivar?
@@ -222,6 +218,8 @@ class TyposLoader:
         self.whitelist = []
         self.fp_page = self.getWhitelistPage()
         if self.fp_page.exists():
-            for match in re.finditer(r'\[\[([^]|]+)\]\]', self.fp_page.text):
-                self.whitelist.append(match[1].strip())
+            self.whitelist.extend(
+                match[1].strip()
+                for match in re.finditer(r'\[\[([^]|]+)\]\]', self.fp_page.text)
+            )
         return self.whitelist

@@ -50,7 +50,7 @@ class DupesMergingBot(WikidataEntityBot):
         self.workers = []
         if count > 1:
             self.queue = Queue(count)
-            for i in range(count):
+            for _ in range(count):
                 thread = Thread(target=self.work)
                 thread.start()
                 self.workers.append(thread)
@@ -225,7 +225,7 @@ class DupesMergingBot(WikidataEntityBot):
 
     def teardown(self):
         count = len(self.workers)
-        for i in range(count):
+        for _ in range(count):
             self.queue.put(None)
         for worker in self.workers:
             worker.join()

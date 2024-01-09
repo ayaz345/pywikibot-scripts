@@ -45,7 +45,7 @@ class UnitsFixingBot(WikidataEntityBot):
                     if self.checkProperty(prop):
                         target = claim.getTarget()
                         if self.change_target(target):
-                            pywikibot.output('Removing unit for property %s' % prop)
+                            pywikibot.output(f'Removing unit for property {prop}')
                             self._save_page(
                                 item, self._save_entity, claim.changeTarget,
                                 target, summary='removing invalid unit, see '

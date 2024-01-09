@@ -33,11 +33,7 @@ class TypoBot(WikitextFixingBot):
         })
         kwargs['typos'] = False
         self.own_generator = not bool(generator)
-        if self.own_generator:
-            self.generator = self.make_generator()
-        else:
-            self.generator = generator
-
+        self.generator = self.make_generator() if self.own_generator else generator
         super().__init__(**kwargs)
         self.offset = offset
 
@@ -53,9 +49,10 @@ class TypoBot(WikitextFixingBot):
     @property
     def is_rule_accurate(self):
         threshold = self.opt['threshold']
-        result = (self.processed < threshold or
-                  self.processed / threshold < self.replaced)
-        return result
+        return (
+            self.processed < threshold
+            or self.processed / threshold < self.replaced
+        )
 
     def make_generator(self):
         for i, rule in enumerate(self.typoRules[:]):
@@ -148,7 +145,8 @@ class TypoBot(WikitextFixingBot):
                 break
 
         self.put_current(
-            text, summary='oprava překlepů: %s' % ', '.join(done_replacements))
+            text, summary=f"oprava překlepů: {', '.join(done_replacements)}"
+        )
 
     def user_confirm(self, question):
         if self.opt['always']:

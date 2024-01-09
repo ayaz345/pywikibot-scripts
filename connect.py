@@ -206,9 +206,9 @@ tp_map = {
     },
 }
 
-for project in tp_map.keys():
+for project, value in tp_map.items():
     lang, family = project.split('|', 1)
-    if len(do_only) > 0 and lang + family not in do_only and family not in do_only:
+    if do_only and lang + family not in do_only and family not in do_only:
         continue
     if lang + family in dont_do or family in dont_do:
         continue
@@ -221,9 +221,8 @@ for project in tp_map.keys():
     for ns in (0, 14, 100):
         if family != 'wikisource' and ns == 100:  # fixme: cswikiquote
             continue
-        if family == 'wikisource' and ns == 0:
-            continue
-        genFactory.handle_arg(f'-ns:{ns}')
+        if family != 'wikisource' or ns != 0:
+            genFactory.handle_arg(f'-ns:{ns}')
     genFactory.handle_arg('-unconnectedpages')
     generator = genFactory.getCombinedGenerator(preload=True)
 
@@ -232,7 +231,7 @@ for project in tp_map.keys():
             continue
 
         for template, fields in textlib.extract_templates_and_params(page.text):
-            if first_lower(template) not in tp_map[project]:
+            if first_lower(template) not in value:
                 continue
 
             params = tp_map[project][first_lower(template)]
@@ -282,8 +281,7 @@ for project in tp_map.keys():
                     break
                 if site.dbName() in item.sitelinks:
                     pywikibot.info(page)
-                    pywikibot.info('%s already has sitelink to %s%s' % (
-                        item, lang, family))
+                    pywikibot.info(f'{item} already has sitelink to {lang}{family}')
                     continue
 
                 try:

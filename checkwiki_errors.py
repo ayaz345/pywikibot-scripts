@@ -76,7 +76,7 @@ class EntityReplacement(CheckWikiError):
     summary = 'substituce HTML entity'
 
     def pattern(self):
-        return re.compile('&(?P<entity>%s);' % '|'.join(self.entities_map.keys()))
+        return re.compile(f"&(?P<entity>{'|'.join(self.entities_map.keys())});")
 
     def replacement(self, match):
         entity = match['entity']
@@ -100,9 +100,7 @@ class PrefixedTemplate(CheckWikiError):
 
     def pattern(self):
         namespaces = self.site.namespaces[10]
-        patterns = []
-        for ns in namespaces:
-            patterns.append(textlib.case_escape(namespaces.case, ns))
+        patterns = [textlib.case_escape(namespaces.case, ns) for ns in namespaces]
         pattern = '|'.join(patterns)
         return re.compile(r'\{\{ *(%s) *: *' % pattern)
 
@@ -155,16 +153,16 @@ class BrokenHTMLTag(CheckWikiError):
                     last = tags_before[-1]
                     if f'</{tag}>' not in match.string[last.end():match.start()]:
                         return f'</{tag}>'
-                    else:
-                        pass # previous and so on
                 else:
                     return ''
 
             return match.group()
 
         text = re.sub(
-            '<(?P<tag>%s)(?: (?P<params>[^>]+?))? */>' % '|'.join(self.tags),
-            replaceTag, text)
+            f"<(?P<tag>{'|'.join(self.tags)})(?: (?P<params>[^>]+?))? */>",
+            replaceTag,
+            text,
+        )
 
         return super().apply(text, page)
 
@@ -244,22 +242,21 @@ class NoEndSquareBrackets(CheckWikiError): # fixme
             if match.string[match.end():].startswith(']') and '[' in inside:
                 return match.group()
 
-            if '|' not in inside:
-                if '[' in inside:
-                    if inside.startswith('['):
-                        return '[[%s]]' % inside.replace('[', '')
-                    else:
-                        return '[[%s]]' % inside.replace('[', '|')
+            if '|' in inside:
+                return f"[[{re.sub('[][]', '', inside)}]]"
 
-                elif ']' in inside:
-                    return '[[%s]]' % inside.replace(']', '|')
-            else:
-                return '[[%s]]' % re.sub('[][]', '', inside)
-
+            if '[' in inside:
+                return (
+                    f"[[{inside.replace('[', '')}]]"
+                    if inside.startswith('[')
+                    else f"[[{inside.replace('[', '|')}]]"
+                )
+            elif ']' in inside:
+                return f"[[{inside.replace(']', '|')}]]"
         else:
             if ']' in inside:
                 split = inside.split(']', 1)
-                return '[[%s%s' % (']]'.join(split), after or '')
+                return f"[[{']]'.join(split)}{after or ''}"
 
             if after == '[[':
                 if match.string[match.end():].find(']]') > match.string[match.end():].find('[['):
@@ -275,15 +272,14 @@ class NoEndSquareBrackets(CheckWikiError): # fixme
                     if word.lower().startswith(split_link[-1].lower()):  # todo: better comparison
                         text = ' '.join(split_text[:i+1])
                         text_after = ' '.join(split_text[i+1:])
-                        return '[[%s|%s]] %s%s%s' % (
-                            link, text, text_after, space_after, after or '')
+                        return f"[[{link}|{text}]] {text_after}{space_after}{after or ''}"
 
                 return match.group()  # todo: same words in link and text
 
             if not after and inside.endswith(']'):
-                return match.group() + ']'
+                return f'{match.group()}]'
 
-            #return match.group()[2:]
+                #return match.group()[2:]
 
         return match.group()
 
@@ -489,7 +485,7 @@ class HeaderHierarchy(HeaderError):
             if level != levels[i]:
                 eq = '=' * levels[i]
                 content = match['content'].strip()
-                text = text[:match.start()] + f'{eq} {content} {eq}' + text[pos:]
+                text = f'{text[:match.start()]}{eq} {content} {eq}{text[pos:]}'
             i += 1
 
         return text
@@ -527,11 +523,11 @@ class MultiplePipes(CheckWikiError):
         if len(split) > 2:
             if '' in split:
                 split.remove('')
-                return '[[%s]]' % '|'.join(split)
+                return f"[[{'|'.join(split)}]]"
 
             if len(set(split)) == 2:
                 deduplicate(split)
-                return '[[%s]]' % '|'.join(split)
+                return f"[[{'|'.join(split)}]]"
 
         return match.group()
 
@@ -552,10 +548,9 @@ class MagicWords(CheckWikiError):
         text = match.group()
         if text.startswith('{{{'):
             return text.strip('{}').partition('|')[2]
-        else:
-            template, sep, value = text.strip('{}').partition(':')
-            if template.strip() in self.magic_templates:
-                return '{{subst:%s}}' % match[1]
+        template, sep, value = text.strip('{}').partition(':')
+        if template.strip() in self.magic_templates:
+            return '{{subst:%s}}' % match[1]
 
         return match.group()
 
@@ -588,11 +583,10 @@ class BoldHeader(HeaderError):
 
     def replacement(self, match, *args):
         content = match.group('content')
-        if "'''" in content:
-            content = content.replace("'''", '').strip()
-            return f"{match['start']} {content} {match['end']}"
-        else:
+        if "'''" not in content:
             return match.group()
+        content = content.replace("'''", '').strip()
+        return f"{match['start']} {content} {match['end']}"
 
 
 class SelfLink(CheckWikiError):
@@ -614,11 +608,7 @@ class SelfLink(CheckWikiError):
 
             index = match.string.replace('&nbsp;', ' ').find(
                 f"'''{title}'''")
-            if index < 0 or match.end() < index:
-                return f"'''{split[-1]}'''"
-            else:
-                return split[-1]
-
+            return f"'''{split[-1]}'''" if index < 0 or match.end() < index else split[-1]
         return match.group()
 
     def apply(self, text, page):
@@ -753,8 +743,7 @@ class RefBeforePunctuation(CheckWikiError):
         all_punct = []
         for ref in re.finditer('<ref', match.group()):
             prev_end = start = ref.start()
-            before = regex.search(ref.string[:start])
-            if before:
+            if before := regex.search(ref.string[:start]):
                 all_punct.append(before.group().strip())
                 prev_end -= len(before.group())
             positions.extend([prev_end, start])
@@ -779,12 +768,7 @@ class RefBeforePunctuation(CheckWikiError):
         if len(distinct) == 1:
             init = distinct.pop()
         elif any(x.endswith(':') for x in all_punct):
-            if '.' in all_punct[0]:
-                init = '.:'
-            else:
-                init = ':'
-##        elif any('.' in x for x in all_punct):
-##            init = '.'
+            init = '.:' if '.' in all_punct[0] else ':'
         elif any(';' in x for x in all_punct):
             init = ';'
         else:
@@ -829,7 +813,7 @@ class BadListStructure(CheckWikiError):  # todo
             levels[:] = ['']
             return line
 
-        this, rest = re.fullmatch('([%s]+)(.*)' % self.list_chars, line).groups()
+        this, rest = re.fullmatch(f'([{self.list_chars}]+)(.*)', line).groups()
 
         for old, new in levels[1:]:
             if this.startswith(old):
@@ -978,8 +962,9 @@ class DuplicateReferences(CheckWikiError):
                         if ref_name != name:
                             destroyed_names[group][name] = ref_name
                         return '<ref name="%s"%s />' % (
-                            ref_name, (' group="%s"' % group)
-                            if group != '' else '')
+                            ref_name,
+                            f' group="{group}"' if group != '' else '',
+                        )
 
                 for ref_name, ref_content in named_contents[group]:
                     if ref_content == content:
@@ -1000,21 +985,24 @@ class DuplicateReferences(CheckWikiError):
                 for ref_name, ref_content in named_contents[group] + list(duplicate_named_contents[group]):
                     if ref_content == content:
                         return '<ref name="%s"%s />' % (
-                            ref_name, (' group="%s"' % group)
-                            if group != '' else '')
+                            ref_name,
+                            f' group="{group}"' if group != '' else '',
+                        )
 
                 if content in duplicate_unnamed_contents[group]:
-                    new_name = 'rfr%s' % i[group]
+                    new_name = f'rfr{i[group]}'
                     while new_name in names[group]:
                         i[group] += 1
-                        new_name = 'rfr%s' % i[group]
+                        new_name = f'rfr{i[group]}'
                     names[group].add(new_name)
                     duplicate_named_contents[group].add(
                         (new_name, content)
                     )
                     return '<ref name="%s"%s>%s</ref>' % (
-                        new_name, (' group="%s"' % group)
-                        if group != '' else '', content)
+                        new_name,
+                        f' group="{group}"' if group != '' else '',
+                        content,
+                    )
 
             return match.group()
 
@@ -1022,23 +1010,18 @@ class DuplicateReferences(CheckWikiError):
             content, params = match.group('content', 'params')
             name, group = getParams(params)
             if name.isdigit() and name not in destroyed_names[group]:
-                new_name = 'rfr%s' % i[group]
+                new_name = f'rfr{i[group]}'
                 while new_name in names[group]:
                     i[group] += 1
-                    new_name = 'rfr%s' % i[group]
+                    new_name = f'rfr{i[group]}'
                 names[group].add(new_name)
                 destroyed_names[group][name] = new_name
 
             if name in destroyed_names[group]:
                 if content is None:
-                    return '<ref name="%s"%s />' % (
-                        destroyed_names[group][name],
-                        (' group="%s"' % group) if group != '' else '')
+                    return f"""<ref name="{destroyed_names[group][name]}"{f' group="{group}"' if group != '' else ''} />"""
                 else:
-                    return '<ref name="%s"%s>%s</ref>' % (
-                        destroyed_names[group][name],
-                        (' group="%s"' % group) if group != '' else '',
-                        content.strip())
+                    return f"""<ref name="{destroyed_names[group][name]}"{f' group="{group}"' if group != '' else ''}>{content.strip()}</ref>"""
 
             ref = '<ref'
             for param_match in param_regex.finditer(params):
@@ -1046,10 +1029,7 @@ class DuplicateReferences(CheckWikiError):
                 quote = param_match.group('quote') or '"'
                 param_content = param_match.group('content').strip()
                 ref += f' {param}={quote}{param_content}{quote}'
-            if content is not None:
-                return f'{ref}>{content.strip()}</ref>'
-            else:
-                return f'{ref} />'
+            return f'{ref}>{content.strip()}</ref>' if content is not None else f'{ref} />'
 
         new_text = ref_regex.sub(replaceRef, text)
         if new_text != text:
@@ -1182,4 +1162,4 @@ class ReferenceQuotes(CheckWikiError):
                         '(?P<ends>[\'"]+)?',
                         handleParam, match.group('params'))
 
-        return '<ref %s%s>' % (params, match.group('slash') or '')
+        return f"<ref {params}{match.group('slash') or ''}>"

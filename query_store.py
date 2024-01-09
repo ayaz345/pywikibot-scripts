@@ -12,8 +12,7 @@ class QueryStore:
         self.path = path
 
     def get_query(self, name):
-        with open('%s.txt' % os.path.join(self.path, name), 'r',
-                  encoding='utf-8') as file:
+        with open(f'{os.path.join(self.path, name)}.txt', 'r', encoding='utf-8') as file:
             file.seek(0)
             return file.read()
 

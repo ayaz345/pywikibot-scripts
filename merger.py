@@ -59,10 +59,7 @@ class Merger:
 
     @classmethod
     def _has_dtype(cls, dtype, claims):
-        for cl in claims:
-            if cl.type == dtype:
-                return True
-        return False
+        return any(cl.type == dtype for cl in claims)
 
     @classmethod
     def _same_tree(cls, prop, data1, data2):

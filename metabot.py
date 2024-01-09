@@ -188,7 +188,7 @@ class MetadataHarvestingBot(WikidataEntityBot):
 
     def get_source(self):
         source = pywikibot.Claim(self.repo, 'P4656', is_reference=True)
-        source.setTarget('https:' + self.current_talk_page.permalink())
+        source.setTarget(f'https:{self.current_talk_page.permalink()}')
         return source
 
     def make_summary(self):
@@ -238,10 +238,11 @@ class MetadataHarvestingBot(WikidataEntityBot):
                 full_regex += f'(?P<value>{regex})'.join(
                     map(re.escape, split[:2]))
                 full_regex += '(?P=value)'.join(map(re.escape, split[2:]))
-                if full_regex.endswith(re.escape('/')):
-                    full_regex += '?'
-                else:
-                    full_regex += re.escape('/') + '?'
+                full_regex += (
+                    '?'
+                    if full_regex.endswith(re.escape('/'))
+                    else re.escape('/') + '?'
+                )
                 full_regex = (fr'(?:{full_regex}|(?:^["\'<]?|\s)'
                               fr'(?P<value2>{regex})(?:["\'>]?$|\]))')
                 try:
@@ -262,13 +263,12 @@ class MetadataHarvestingBot(WikidataEntityBot):
                     flags |= re.I
                 regex = re.compile(
                     fr'\b(?:[Ff]il|[Ii]mag)e:(?P<value>{regex})', flags)
+        elif prop.type in self.regexes:
+            regex = self.regexes[prop.type]
         else:
-            if prop.type in self.regexes:
-                regex = self.regexes[prop.type]
-            else:
-                pywikibot.info(f'"{prop.type}" is not supported datatype '
-                               'for matching examples')
-                return False
+            pywikibot.info(f'"{prop.type}" is not supported datatype '
+                           'for matching examples')
+            return False
 
         remove = True
         split = self.regexes['split-break'].split(textvalue)
@@ -313,7 +313,7 @@ class MetadataHarvestingBot(WikidataEntityBot):
                         break
 
             if prop.type == 'wikibase-item':
-                qual_target = pywikibot.ItemPage(self.repo, 'Q' + qual_target)
+                qual_target = pywikibot.ItemPage(self.repo, f'Q{qual_target}')
                 if not qual_target.exists():
                     pywikibot.info(f'"{qual_target.title()}" doesn\'t exist')
                     remove = False
@@ -321,8 +321,7 @@ class MetadataHarvestingBot(WikidataEntityBot):
                 while qual_target.isRedirectPage():
                     qual_target = qual_target.getRedirectTarget()
             elif prop.type == 'wikibase-property':
-                qual_target = pywikibot.PropertyPage(
-                    self.repo, 'P' + qual_target)
+                qual_target = pywikibot.PropertyPage(self.repo, f'P{qual_target}')
             elif prop.type == 'commonsMedia':
                 commons = pywikibot.Site('commons', 'commons')
                 imagelink = pywikibot.Link(qual_target, source=commons,
@@ -435,9 +434,7 @@ class MetadataHarvestingBot(WikidataEntityBot):
                 pywikibot.exception(e)
             else:
                 claim = pywikibot.Claim(self.repo, 'P3254')
-                target = ('https://www.wikidata.org/wiki/'
-                          'Wikidata:Property_proposal/Archive/{}#{}'
-                          ).format(textvalue, prop.id)
+                target = f'https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/{textvalue}#{prop.id}'
                 claim.setTarget(target)
                 claim.addSource(self.get_source())
                 return self.user_add_claim(
@@ -447,11 +444,11 @@ class MetadataHarvestingBot(WikidataEntityBot):
     def subpage(self, textvalue):
         prop = self.current_page
         if 'P3254' not in prop.claims:
-            title = 'Wikidata:Property_proposal/' + textvalue
+            title = f'Wikidata:Property_proposal/{textvalue}'
             page = pywikibot.Page(self.repo, title)
             if page.exists():
                 claim = pywikibot.Claim(self.repo, 'P3254')
-                target = 'https://www.wikidata.org/wiki/' + title
+                target = f'https://www.wikidata.org/wiki/{title}'
                 claim.setTarget(target)
                 claim.addSource(self.get_source())
                 return self.user_add_claim(prop, claim, self.make_summary())
@@ -496,8 +493,7 @@ class MetadataHarvestingBot(WikidataEntityBot):
         prop = self.current_page
         if prop.type == 'external-id' and 'P4876' not in prop.claims:
             remove = False
-            match = self.regexes['quantity'].search(textvalue)
-            if match:
+            if match := self.regexes['quantity'].search(textvalue):
                 try:
                     num = int(match['value'])
                 except ValueError as e:

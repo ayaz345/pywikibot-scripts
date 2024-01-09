@@ -108,7 +108,7 @@ class QuickStatementsBot(WikidataEntityBot):
                         error = upper - amount, amount - lower
             if match:
                 if unit:
-                    unit = pywikibot.ItemPage(self.repo, 'Q' + unit)
+                    unit = pywikibot.ItemPage(self.repo, f'Q{unit}')
                 quantity = WbQuantity(amount, unit, error, site=self.repo)
                 snak.setTarget(quantity)
                 return True
@@ -138,7 +138,6 @@ class QuickStatementsBot(WikidataEntityBot):
                 return True
             else:
                 invalid_report()
-        # todo: elif snak.type in ('geo-shape', 'tabular-data'):
         elif snak.type == 'monolingualtext':
             lang, _, text = value.partition(':')
             literal = self.valid_text_literal(text)
@@ -174,8 +173,7 @@ class QuickStatementsBot(WikidataEntityBot):
         return False
 
     def handle_line(self, line):
-        comment_match = self.commentR.search(line)
-        if comment_match:
+        if comment_match := self.commentR.search(line):
             summary = comment_match[1]
             line = line[:comment_match.start()]
         else:
@@ -272,7 +270,7 @@ class QuickStatementsBot(WikidataEntityBot):
         for prop, value in zip(split[3::2], split[4::2]):
             if prop.startswith('S'):
                 collection = references
-                prop = 'P' + prop[1:]
+                prop = f'P{prop[1:]}'
                 key = 'is_reference'
             else:
                 collection = qualifiers
@@ -291,11 +289,11 @@ class QuickStatementsBot(WikidataEntityBot):
 
             snak = obj.newClaim(**{key: True})
             del obj
-            ok = self.set_target(snak, value.strip())
-            if not ok:
-                return
-            collection.append(snak)
+            if ok := self.set_target(snak, value.strip()):
+                collection.append(snak)
 
+            else:
+                return
         has_qualifiers = list(chain(*claim.qualifiers.values()))
         for qual in qualifiers:
             if qual not in has_qualifiers:
@@ -307,8 +305,7 @@ class QuickStatementsBot(WikidataEntityBot):
 
     def run(self):
         for line in self.generator:
-            line = line.rstrip()
-            if line:
+            if line := line.rstrip():
                 self.handle_line(line)
 
 
